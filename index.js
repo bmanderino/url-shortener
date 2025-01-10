@@ -23,25 +23,37 @@ app.get('/api/hello', function(req, res) {
   res.json({ greeting: 'hello API' });
 });
 
+
+const urlStoredList = []
+
 const options = {
   family: 6,
   hints: dns.ADDRCONFIG | dns.V4MAPPED,
 };
 options.all = true
+
+const ERROR_MESSAGE = {error: "Invalid URL"}
+
 app.post('/api/shorturl', async (req, res) => {
-  let url = req.body.url
-  let testURL = url;
-  let isValidUrl = false
-  if (url.includes('://')) {
-    testURL = url.split('://')[1]
+  if (!req.body.url || !req.body.url.includes('://')) {
+    res.json(ERROR_MESSAGE)
+  } else {
+    let url = req.body.url
+    let testURL = url.split('://')[1]
+    dns.lookup(testURL, options, (err, addresses) => {
+      if (addresses) {
+        urlStoredList.push(url)
+        res.json({original_url: url, short_url: urlStoredList.indexOf(url)})
+      } else {
+        res.json(ERROR_MESSAGE)
+      }
+    })
   }
-  dns.lookup(testURL, options, (err, addresses) => {
-    if (addresses !== undefined) {
-      res.json({response: "hello"})
-    } else {
-      res.json({error: "Invalid URL"})
-    }
-  })
+})
+
+app.get('/api/shorturl/:url', (req, res) => {
+  let urlIndex = req.params.url
+  res.redirect(urlStoredList[urlIndex]);
 })
 
 app.listen(port, function() {
